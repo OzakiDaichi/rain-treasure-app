@@ -3,106 +3,280 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#6EB6F5">
-<title>雨の日だけの宝探し</title>
+<meta name="theme-color" content="#081D33">
+<title>雨の日だけの宝探し — Ver.3</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root{--ink:#17344a;--muted:#6d8395;--blue:#438fd4;--glass:rgba(255,255,255,.94)}
+:root{
+ --navy:#0c2034;--navy2:#122d47;--glass:rgba(10,29,48,.82);
+ --white:#fff;--muted:#a8bfd0;--cyan:#73d2ff;--gold:#ffd76a;--green:#84dfa5;
+}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui,sans-serif;background:#eef7ff;color:var(--ink)}
-#app{max-width:430px;height:100dvh;margin:auto;position:relative;overflow:hidden;background:#fff}
-#map{position:absolute;inset:0}.leaflet-control-attribution{font-size:8px!important}
-.top{position:absolute;z-index:1000;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
-.logo,.radar{background:var(--glass);backdrop-filter:blur(10px);border-radius:17px;box-shadow:0 7px 22px rgba(35,76,108,.18)}
-.logo{padding:11px 13px;font-weight:800;font-size:15px}.radar{padding:8px 10px;font-size:10px;color:#557084;text-align:right}
-.live{font-weight:800;color:#2e86d1}.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4c9ce2;margin-right:5px;box-shadow:0 0 0 4px rgba(76,156,226,.15)}
-.stats{position:absolute;z-index:1000;top:76px;left:12px;background:var(--glass);border-radius:15px;padding:8px 11px;box-shadow:0 5px 16px rgba(35,76,108,.14);font-size:12px;font-weight:800}
-.legend{position:absolute;z-index:1000;left:12px;bottom:98px;background:var(--glass);padding:8px 10px;border-radius:14px;box-shadow:0 5px 16px rgba(35,76,108,.14);font-size:10px;line-height:1.8}
-.sw{display:inline-block;width:11px;height:11px;border-radius:4px;vertical-align:-2px;margin-right:5px}.rain{background:rgba(61,145,226,.34);border:1px solid #69a9e3}.clear{background:#fff;border:1px solid #ccd9e2}
-.locate{position:absolute;z-index:1001;right:14px;bottom:103px;width:48px;height:48px;border:0;border-radius:50%;background:#fff;box-shadow:0 7px 20px rgba(35,76,108,.22);font-size:22px}
-.bottom{position:absolute;z-index:1000;left:10px;right:10px;bottom:10px;background:var(--glass);backdrop-filter:blur(12px);border-radius:20px;padding:12px 14px;box-shadow:0 8px 26px rgba(35,76,108,.2)}
-.bottom b{font-size:13px}.bottom p{margin:3px 0 0;font-size:10px;color:var(--muted)}
-.user-dot{width:18px;height:18px;border-radius:50%;background:#1877d2;border:4px solid white;box-shadow:0 0 0 5px rgba(24,119,210,.2),0 2px 8px #777}
-.item-wrap{background:transparent;border:0}.item{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:24px;background:#fff;border:2px solid #fff;box-shadow:0 7px 18px rgba(31,80,118,.25);animation:bob 2s ease-in-out infinite;cursor:pointer}
-.item.drop{background:#e5f5ff}.item.chest{background:#fff1bf}.item.rare{background:#e9f7df}@keyframes bob{50%{transform:translateY(-6px)}}
-.rain-label{background:rgba(43,120,194,.88);color:#fff;border:0;border-radius:13px;padding:4px 8px;font-weight:700;font-size:10px}.rain-label:before{display:none}
-.toast{position:absolute;z-index:2000;left:50%;bottom:112px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;transition:.22s;background:rgba(20,48,69,.93);color:white;padding:11px 15px;border-radius:16px;white-space:nowrap;font-size:12px;box-shadow:0 7px 20px rgba(0,0,0,.18)}
+html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui,sans-serif;background:#061522;color:#fff}
+#app{max-width:460px;height:100dvh;margin:auto;position:relative;overflow:hidden;background:#0b1e31}
+#map{position:absolute;inset:0 0 82px 0}
+.leaflet-control-attribution{font-size:8px!important;background:rgba(255,255,255,.7)!important}
+.top{
+ position:absolute;z-index:1000;top:0;left:0;right:0;padding:12px;
+ background:linear-gradient(180deg,rgba(5,18,31,.86),rgba(5,18,31,.25),transparent);
+ pointer-events:none
+}
+.toprow{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.brand{font-weight:900;font-size:17px;letter-spacing:.01em;text-shadow:0 2px 10px #000}
+.weatherBadge{
+ pointer-events:auto;background:var(--glass);backdrop-filter:blur(12px);
+ border:1px solid rgba(255,255,255,.12);padding:8px 10px;border-radius:15px;
+ font-size:10px;color:#dcecf7;text-align:right;box-shadow:0 7px 18px rgba(0,0,0,.2)
+}
+.live{color:var(--cyan);font-weight:900}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#65d1ff;margin-right:5px;box-shadow:0 0 0 4px rgba(101,209,255,.14)}
+.modebar{
+ position:absolute;z-index:1002;left:50%;transform:translateX(-50%);top:72px;
+ display:flex;background:rgba(8,25,42,.88);border:1px solid rgba(255,255,255,.14);
+ padding:4px;border-radius:17px;box-shadow:0 6px 16px rgba(0,0,0,.22);backdrop-filter:blur(10px)
+}
+.modebar button{border:0;background:transparent;color:#bdd0df;padding:8px 13px;border-radius:13px;font-weight:800;font-size:11px}
+.modebar button.active{background:#fff;color:#11304b}
+.counter{
+ position:absolute;z-index:1001;left:12px;top:120px;background:var(--glass);
+ border:1px solid rgba(255,255,255,.12);border-radius:15px;padding:8px 10px;
+ font-size:11px;box-shadow:0 6px 16px rgba(0,0,0,.18);backdrop-filter:blur(10px)
+}
+.locate,.keybtn{
+ position:absolute;z-index:1001;right:14px;width:48px;height:48px;border:1px solid rgba(255,255,255,.22);
+ border-radius:50%;background:rgba(10,31,51,.88);color:#fff;box-shadow:0 7px 20px rgba(0,0,0,.3);font-size:20px
+}
+.locate{bottom:104px}.keybtn{bottom:162px;font-size:17px}
+.bottomnav{
+ position:absolute;z-index:1100;left:0;right:0;bottom:0;height:82px;background:#081b2e;
+ border-top:1px solid rgba(255,255,255,.09);display:grid;grid-template-columns:repeat(3,1fr);
+ padding-bottom:env(safe-area-inset-bottom)
+}
+.bottomnav button{border:0;background:transparent;color:#7994a9;font-weight:800;font-size:10px}
+.bottomnav button span{display:block;font-size:23px;margin-bottom:3px}
+.bottomnav button.active{color:#7fd5ff}
+.sheet{
+ position:absolute;z-index:1050;left:10px;right:10px;bottom:92px;background:rgba(8,27,46,.91);
+ border:1px solid rgba(255,255,255,.13);border-radius:20px;padding:12px 14px;backdrop-filter:blur(14px);
+ box-shadow:0 8px 25px rgba(0,0,0,.3)
+}
+.sheet b{font-size:13px}.sheet p{margin:3px 0 0;color:#a9bfce;font-size:10px;line-height:1.5}
+.userDot{width:18px;height:18px;border-radius:50%;background:#58b8ff;border:4px solid #fff;box-shadow:0 0 0 5px rgba(88,184,255,.26),0 2px 8px #000}
+.itemwrap{background:transparent;border:0}
+.item{
+ width:43px;height:43px;border-radius:50%;display:grid;place-items:center;font-size:23px;
+ border:2px solid rgba(255,255,255,.9);box-shadow:0 7px 18px rgba(0,0,0,.32);animation:bob 2s ease-in-out infinite
+}
+.drop{background:#dff5ff}.chest{background:#ffedb3}.rare{background:#dff7df}@keyframes bob{50%{transform:translateY(-5px)}}
+.citywrap{background:transparent;border:0}
+.citymarker{
+ min-width:76px;padding:7px 9px;border-radius:14px;background:rgba(7,29,49,.9);color:white;
+ border:1px solid rgba(255,255,255,.22);box-shadow:0 5px 15px rgba(0,0,0,.25);font-size:10px;text-align:center
+}
+.citymarker.raining{background:rgba(28,99,155,.92);border-color:#80d2ff}
+.citymarker b{display:block;font-size:11px}
+.toast{
+ position:absolute;z-index:2000;left:50%;bottom:105px;transform:translateX(-50%) translateY(15px);
+ background:rgba(4,18,30,.95);border:1px solid rgba(255,255,255,.15);padding:11px 15px;border-radius:15px;
+ white-space:nowrap;font-size:11px;opacity:0;transition:.2s;pointer-events:none
+}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.loading{position:absolute;z-index:3000;inset:0;background:#f6fbff;display:grid;place-items:center;text-align:center;padding:30px}.loading h2{margin:0 0 8px}.loading p{margin:0;color:#6f8495;font-size:13px;line-height:1.6}
-</style></head>
+.modal{
+ position:absolute;z-index:3000;inset:0;background:rgba(2,10,17,.78);display:none;align-items:center;justify-content:center;padding:22px
+}
+.modal.show{display:flex}
+.modalbox{width:100%;background:#0e2942;border:1px solid rgba(255,255,255,.15);border-radius:24px;padding:20px;box-shadow:0 20px 45px rgba(0,0,0,.45)}
+.modalbox h2{font-size:18px;margin:0 0 8px}.modalbox p{font-size:11px;color:#b7cbd9;line-height:1.6}
+.modalbox input{width:100%;border:1px solid #45627a;background:#071b2d;color:#fff;border-radius:14px;padding:13px;margin:8px 0;font-size:13px}
+.actions{display:flex;gap:8px;margin-top:8px}.actions button{flex:1;border:0;border-radius:14px;padding:11px;font-weight:800}
+.save{background:#79cef7;color:#092039}.cancel{background:#24435d;color:#fff}
+.panel{
+ position:absolute;z-index:1200;inset:0 0 82px 0;background:#071a2c;display:none;padding:86px 16px 18px;overflow:auto
+}
+.panel.show{display:block}
+.panel h2{margin:0 0 15px}
+.card{background:#0e2942;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:16px;margin-bottom:12px}
+.garden{text-align:center}.plant{font-size:85px;margin:15px}
+.bar{height:9px;border-radius:10px;background:#203b51;overflow:hidden}.bar>div{height:100%;background:#78da9a;width:0%}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.mini{text-align:center}.mini .emoji{font-size:35px}
+</style>
+</head>
 <body><div id="app">
 <div id="map"></div>
-<div class="top"><div class="logo">☔ 雨の日だけの宝探し</div><div class="radar"><span class="pulse"></span><span class="live">RAIN RADAR</span><br>更新 2分前</div></div>
-<div class="stats">💧 <span id="drops">0</span>　🎁 <span id="chests">0</span>　🌱 <span id="rares">0</span></div>
-<div class="legend"><div><span class="sw rain"></span>雨エリア：アイテム出現</div><div><span class="sw clear"></span>晴れエリア：アイテムなし</div></div>
-<button class="locate" onclick="goToMe()">◎</button>
-<div class="bottom"><b id="status">現在地を取得しています…</b><p>アイテムは現在地から20m以内でGETできます。</p></div>
-<div class="toast" id="toast"></div>
-<div class="loading" id="loading"><div><h2>現在地を探しています ☔</h2><p>位置情報の利用を「許可」してください。<br>あなたの周りに雨雲と宝物をつくります。</p></div></div>
+
+<div class="top"><div class="toprow">
+  <div class="brand">☔ 雨の日だけの宝探し</div>
+  <div class="weatherBadge"><span class="dot"></span><span class="live">LIVE PRECIPITATION</span><br><span id="radarState">API未接続</span></div>
+</div></div>
+
+<div class="modebar">
+  <button id="localBtn" class="active" onclick="setMode('local')">現在地</button>
+  <button id="japanBtn" onclick="setMode('japan')">日本全国</button>
 </div>
+
+<div class="counter">💧 <span id="drops">0</span>　🎁 <span id="chests">0</span>　🌱 <span id="rares">0</span></div>
+
+<button class="keybtn" onclick="openKey()">🔑</button>
+<button class="locate" onclick="goToMe()">◎</button>
+
+<div class="sheet" id="sheet">
+ <b id="status">位置情報を取得しています…</b>
+ <p id="substatus">APIキーを設定するとOpenWeatherの実降水レイヤーを表示します。</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="gardenPanel" class="panel">
+ <h2>GARDEN</h2>
+ <div class="card garden"><div>集めた雨で育つ、わたしの植物</div><div class="plant" id="plant">🌱</div>
+ <div class="bar"><div id="growbar"></div></div><p id="gardenText">雨粒を5つ集めると成長します。</p></div>
+</div>
+
+<div id="collectionPanel" class="panel">
+ <h2>COLLECTION</h2>
+ <div class="grid">
+  <div class="card mini"><div class="emoji">💧</div><b>雨粒</b><p><span id="cdrops">0</span> 個</p></div>
+  <div class="card mini"><div class="emoji">🎁</div><b>宝箱</b><p><span id="cchests">0</span> 個</p></div>
+  <div class="card mini"><div class="emoji">🌱</div><b>レア</b><p><span id="crares">0</span> 個</p></div>
+  <div class="card mini"><div class="emoji">🎟️</div><b>クーポン</b><p><span id="coupons">0</span> 枚</p></div>
+ </div>
+</div>
+
+<div class="bottomnav">
+ <button class="active" id="mapNav" onclick="showPanel('map')"><span>🗺️</span>RAIN MAP</button>
+ <button id="gardenNav" onclick="showPanel('garden')"><span>🌿</span>GARDEN</button>
+ <button id="collectionNav" onclick="showPanel('collection')"><span>🎒</span>COLLECTION</button>
+</div>
+
+<div class="modal" id="keyModal"><div class="modalbox">
+ <h2>OpenWeather APIキー</h2>
+ <p>この端末のブラウザ内にだけ保存します。公開GitHubのコードには書き込みません。</p>
+ <input id="keyInput" type="password" placeholder="APIキーを入力">
+ <div class="actions"><button class="cancel" onclick="closeKey()">キャンセル</button><button class="save" onclick="saveKey()">接続する</button></div>
+</div></div>
+
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-let map,me,myLat,myLng,watchId;
-let counts={drop:0,chest:0,rare:0};
-const items=[];
 const GET_DISTANCE=20;
+let map,me,myLat=34.9858,myLng=135.7588,apiKey=localStorage.getItem('owmKey')||'';
+let weatherLayer=null, mode='local', localItems=[], nationalMarkers=[];
+let counts={drop:0,chest:0,rare:0}, gardenLevel=0;
+const cities=[
+ ['札幌',43.0618,141.3545],['仙台',38.2682,140.8694],['東京',35.6762,139.6503],
+ ['横浜',35.4437,139.6380],['名古屋',35.1815,136.9066],['京都',35.0116,135.7681],
+ ['大阪',34.6937,135.5023],['神戸',34.6901,135.1955],['広島',34.3853,132.4553],
+ ['高松',34.3428,134.0466],['福岡',33.5902,130.4017],['鹿児島',31.5966,130.5571],['那覇',26.2124,127.6809]
+];
 
-function distanceMeters(a,b,c,d){
- const R=6371000, rad=x=>x*Math.PI/180;
- const p1=rad(a),p2=rad(c),dp=rad(c-a),dl=rad(d-b);
- const h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
- return 2*R*Math.asin(Math.sqrt(h));
+function dist(a,b,c,d){const R=6371000,r=x=>x*Math.PI/180,p1=r(a),p2=r(c),dp=r(c-a),dl=r(d-b),h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+function msg(t){let x=document.getElementById('toast');x.textContent=t;x.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>x.classList.remove('show'),2200)}
+function init(){
+ map=L.map('map',{zoomControl:false}).setView([myLat,myLng],13);
+ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(map);
+ setMe(myLat,myLng);
+ if(apiKey) connectWeather();
+ locate();
 }
-function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');clearTimeout(window.tt);window.tt=setTimeout(()=>e.classList.remove('show'),2200)}
-function init(lat,lng){
+function setMe(lat,lng){
  myLat=lat;myLng=lng;
- map=L.map('map',{zoomControl:false}).setView([lat,lng],13);
- L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
- const icon=L.divIcon({className:'',html:'<div class="user-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]});
- me=L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(map).bindTooltip('現在地');
- makeWorld(lat,lng);
- document.getElementById('loading').style.display='none';
- document.getElementById('status').textContent='雨雲の中に宝物が出現しています。';
- if(navigator.geolocation) watchId=navigator.geolocation.watchPosition(updatePos,()=>{}, {enableHighAccuracy:true,maximumAge:3000});
+ const icon=L.divIcon({className:'',html:'<div class="userDot"></div>',iconSize:[18,18],iconAnchor:[9,9]});
+ if(me)me.setLatLng([lat,lng]); else me=L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(map).bindTooltip('現在地');
 }
-function makeWorld(lat,lng){
- const zones=[
-  {lat:lat+0.010,lng:lng+0.013,r:1300,name:'雨エリア A'},
-  {lat:lat-0.014,lng:lng-0.016,r:1050,name:'雨エリア B'}
+function locate(){
+ if(!navigator.geolocation){spawnLocal();return}
+ navigator.geolocation.getCurrentPosition(p=>{
+   setMe(p.coords.latitude,p.coords.longitude); if(mode==='local')map.setView([myLat,myLng],13); spawnLocal();
+   navigator.geolocation.watchPosition(q=>setMe(q.coords.latitude,q.coords.longitude),()=>{}, {enableHighAccuracy:true,maximumAge:4000});
+ },()=>{spawnLocal();msg('位置情報を取得できないためデモ位置です');},{enableHighAccuracy:true,timeout:10000});
+}
+function connectWeather(){
+ if(weatherLayer)map.removeLayer(weatherLayer);
+ weatherLayer=L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`,{
+   opacity:.62,maxZoom:19,attribution:'OpenWeather'
+ }).addTo(map);
+ document.getElementById('radarState').textContent='実降水レイヤー接続中';
+ if(mode==='japan')loadJapanStatus();
+}
+function spawnLocal(){
+ localItems.forEach(x=>map.removeLayer(x.marker));localItems=[];
+ // 実データの上にゲーム用アイテムを配置するプロトタイプ。
+ // 雨量ピクセル自体の自動判定は行わず、現在地周辺の複数地点へ配置。
+ const pts=[
+  ['drop',.0012,.0010],['chest',.0030,-.0022],['drop',-.0025,.0025],
+  ['rare',-.0040,-.0026],['chest',.0050,.0040],['drop',-.005,.005]
  ];
- zones.forEach((z,zi)=>{
-  [[0,0,1],[.0035,.0045,.78],[-.003,.005,.67],[.003,-.005,.7],[-.004,-.003,.6]].forEach(o=>{
-   L.circle([z.lat+o[0],z.lng+o[1]],{radius:z.r*o[2],color:'#4697df',weight:1,fillColor:'#5aa9ed',fillOpacity:.18,interactive:false}).addTo(map);
-  });
-  L.tooltip({permanent:true,direction:'center',className:'rain-label'}).setLatLng([z.lat,z.lng]).setContent('☔ '+z.name).addTo(map);
-  const specs=zi===0?[
-   ['drop',.001,.001],['chest',.004,-.002],['drop',-.004,.003],['rare',-.002,-.005],['chest',.006,.005]
-  ]:[
-   ['drop',.002,-.001],['chest',-.003,.003],['drop',-.005,-.002],['rare',.004,.004]
-  ];
-  specs.forEach(s=>addItem(s[0],z.lat+s[1],z.lng+s[2]));
- });
+ pts.forEach(p=>addItem(p[0],myLat+p[1],myLng+p[2]));
+ document.getElementById('status').textContent=apiKey?'実際の降水レイヤーを表示しています。':'APIキーを設定すると実際の降水を表示できます。';
 }
 function addItem(type,lat,lng){
- const emoji={drop:'💧',chest:'🎁',rare:'🌱'}[type];
- const icon=L.divIcon({className:'item-wrap',html:`<div class="item ${type}">${emoji}</div>`,iconSize:[44,44],iconAnchor:[22,22]});
- const marker=L.marker([lat,lng],{icon,zIndexOffset:500}).addTo(map);
- const obj={type,lat,lng,marker,taken:false};items.push(obj);
- marker.on('click',()=>tryGet(obj));
+ const e={drop:'💧',chest:'🎁',rare:'🌱'}[type];
+ const icon=L.divIcon({className:'itemwrap',html:`<div class="item ${type}">${e}</div>`,iconSize:[43,43],iconAnchor:[21,21]});
+ const marker=L.marker([lat,lng],{icon,zIndexOffset:600}).addTo(map);
+ const o={type,lat,lng,marker,taken:false};localItems.push(o);marker.on('click',()=>take(o));
 }
-function tryGet(o){
- if(o.taken)return;
- const d=Math.round(distanceMeters(myLat,myLng,o.lat,o.lng));
- if(d>GET_DISTANCE){toast(`あと ${d}m。近くまで歩いてみよう！`);map.flyTo([o.lat,o.lng],15,{duration:.6});return;}
- o.taken=true;map.removeLayer(o.marker);counts[o.type]++;
- document.getElementById(o.type==='drop'?'drops':o.type==='chest'?'chests':'rares').textContent=counts[o.type];
- toast(o.type==='drop'?'雨粒をGET！ 💧':o.type==='chest'?'宝箱をGET！ 🎁':'レアアイテムをGET！ 🌱');
+function take(o){
+ if(o.taken)return;const d=Math.round(dist(myLat,myLng,o.lat,o.lng));
+ if(d>GET_DISTANCE){msg(`あと ${d}m。近くまで歩いてみよう！`);return}
+ o.taken=true;map.removeLayer(o.marker);counts[o.type]++;syncCounts();
+ if(o.type==='chest')document.getElementById('coupons').textContent=counts.chest;
+ msg(o.type==='drop'?'雨粒をGET！ 💧':o.type==='chest'?'宝箱をGET！ クーポン入り 🎁':'レアアイテムをGET！ 🌱');
 }
-function updatePos(p){
- myLat=p.coords.latitude;myLng=p.coords.longitude;
- if(me)me.setLatLng([myLat,myLng]);
+function syncCounts(){
+ for(const k of ['drop','chest','rare']){
+  document.getElementById(k==='drop'?'drops':k==='chest'?'chests':'rares').textContent=counts[k];
+  document.getElementById(k==='drop'?'cdrops':k==='chest'?'cchests':'crares').textContent=counts[k];
+ }
+ let pct=Math.min(100,(counts.drop%5)*20);document.getElementById('growbar').style.width=pct+'%';
+ if(counts.drop>=5){gardenLevel=Math.floor(counts.drop/5);document.getElementById('plant').textContent=gardenLevel>=2?'🌳':'🪴';}
 }
-function goToMe(){if(map)map.flyTo([myLat,myLng],15,{duration:.7})}
-function fallback(){init(34.985849,135.758766);document.getElementById('status').textContent='位置情報を取得できないためデモ位置を表示中。'}
-navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>init(p.coords.latitude,p.coords.longitude),fallback,{enableHighAccuracy:true,timeout:10000}):fallback();
+function setMode(m){
+ mode=m;document.getElementById('localBtn').classList.toggle('active',m==='local');document.getElementById('japanBtn').classList.toggle('active',m==='japan');
+ if(m==='japan'){map.flyTo([36.2,138.2],5,{duration:.8});document.getElementById('status').textContent='日本全国の雨と宝物の出現状況';loadJapanStatus();}
+ else{nationalMarkers.forEach(x=>map.removeLayer(x));nationalMarkers=[];map.flyTo([myLat,myLng],13,{duration:.8});document.getElementById('status').textContent='現在地周辺の宝物';}
+}
+async function loadJapanStatus(){
+ nationalMarkers.forEach(x=>map.removeLayer(x));nationalMarkers=[];
+ if(!apiKey){
+  document.getElementById('substatus').textContent='APIキーを接続すると主要都市の現在の雨を判定します。';
+  cities.forEach(c=>addCity(c[0],c[1],c[2],null));
+  return;
+ }
+ document.getElementById('substatus').textContent='主要都市の現在の降水状況を取得中…';
+ const jobs=cities.map(async c=>{
+  try{
+   const r=await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${c[1]}&lon=${c[2]}&appid=${apiKey}&units=metric&lang=ja`);
+   if(!r.ok)throw new Error(r.status);
+   const j=await r.json();
+   const main=(j.weather&&j.weather[0]&&j.weather[0].main)||'';
+   const raining=['Rain','Drizzle','Thunderstorm'].includes(main)||!!j.rain;
+   addCity(c[0],c[1],c[2],raining);
+  }catch(e){addCity(c[0],c[1],c[2],null)}
+ });
+ await Promise.all(jobs);
+ document.getElementById('substatus').textContent='青い都市では雨に連動して宝物が出現中。遠隔地では閲覧のみです。';
+}
+function addCity(name,lat,lng,raining){
+ const count=raining?Math.floor(3+Math.random()*8):0;
+ const text=raining?`<b>☔ ${name}</b>🎁 ${count} 出現中`:`<b>${name}</b>${raining===false?'☀️ 出現なし':'… 確認待ち'}`;
+ const icon=L.divIcon({className:'citywrap',html:`<div class="citymarker ${raining?'raining':''}">${text}</div>`,iconSize:[82,40],iconAnchor:[41,20]});
+ const m=L.marker([lat,lng],{icon,interactive:true}).addTo(map);nationalMarkers.push(m);
+ m.on('click',()=>msg(raining?`${name}：雨の日の宝物が ${count} 個出現中`:`${name}：現在は宝物なし`));
+}
+function goToMe(){setMode('local');map.flyTo([myLat,myLng],15,{duration:.7})}
+function openKey(){document.getElementById('keyInput').value=apiKey;document.getElementById('keyModal').classList.add('show')}
+function closeKey(){document.getElementById('keyModal').classList.remove('show')}
+function saveKey(){
+ const v=document.getElementById('keyInput').value.trim();if(!v)return msg('APIキーを入力してください');
+ apiKey=v;localStorage.setItem('owmKey',apiKey);closeKey();connectWeather();msg('OpenWeatherに接続しました');if(mode==='japan')loadJapanStatus();
+}
+function showPanel(p){
+ document.getElementById('gardenPanel').classList.toggle('show',p==='garden');
+ document.getElementById('collectionPanel').classList.toggle('show',p==='collection');
+ document.getElementById('mapNav').classList.toggle('active',p==='map');
+ document.getElementById('gardenNav').classList.toggle('active',p==='garden');
+ document.getElementById('collectionNav').classList.toggle('active',p==='collection');
+}
+init();
 </script></body></html>
