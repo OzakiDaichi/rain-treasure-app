@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#8cc8ff"><link rel="manifest" href="manifest.webmanifest">
+<title>雨の日だけの宝探し</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:"Hiragino Sans","Yu Gothic",sans-serif;background:#eef7ff;color:#18324b}
+.app{max-width:430px;margin:auto;min-height:100vh;background:white;position:relative;overflow:hidden}
+header{padding:22px 20px 12px;background:linear-gradient(#dff2ff,#fff)}
+h1{font-size:27px;margin:0 0 6px}.sub{font-size:13px;color:#52708b}
+.map{height:430px;position:relative;background:
+linear-gradient(25deg,transparent 47%,#fff 48% 52%,transparent 53%),
+linear-gradient(115deg,transparent 47%,#fff 48% 52%,transparent 53%),
+#dff1d5;background-size:120px 100px}
+.road{position:absolute;background:#fff8d8;border:1px solid #e9e1bc}
+.pin{position:absolute;font-size:35px;filter:drop-shadow(0 2px 2px #777);cursor:pointer;animation:bob 1.8s infinite}
+@keyframes bob{50%{transform:translateY(-7px)}} 
+.rain{position:absolute;font-size:25px;cursor:pointer}
+.me{position:absolute;left:47%;top:48%;font-size:34px}
+.card{margin:-18px 16px 0;position:relative;background:white;border-radius:22px;padding:17px;box-shadow:0 7px 25px #b9ccda}
+.row{display:flex;justify-content:space-between;align-items:center}.stat{font-weight:700}
+button{border:0;border-radius:18px;padding:12px 16px;background:#2276c9;color:white;font-weight:700}
+.garden{display:flex;gap:14px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px dashed #bdd3e5}
+.plant{font-size:48px}.note{font-size:13px;line-height:1.7;color:#52708b}
+.toast{display:none;position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:#18324be8;color:#fff;padding:12px 18px;border-radius:18px;white-space:nowrap}
+</style>
+</head>
+<body><main class="app">
+<header><h1>☔ 雨の日だけの宝探し</h1><div class="sub">雨が降った街を、歩いて、見つけて、集めて、育てる。</div></header>
+<section class="map" id="map">
+<div class="me">🚶‍♀️</div>
+<div class="pin" style="left:16%;top:17%" onclick="treasure(this)">🧰</div>
+<div class="pin" style="right:15%;top:26%" onclick="treasure(this)">🎁</div>
+<div class="pin" style="left:25%;bottom:18%" onclick="treasure(this)">🧰</div>
+<div class="rain" style="left:62%;top:12%" onclick="drop(this)">💧</div>
+<div class="rain" style="left:10%;top:55%" onclick="drop(this)">💧</div>
+<div class="rain" style="right:12%;bottom:15%" onclick="drop(this)">💧</div>
+</section>
+<section class="card">
+<div class="row"><div><b>いま、この街に雨。</b><div class="note">近くの宝物を探してみよう。</div></div><div class="stat">💧 <span id="drops">3</span></div></div>
+<div class="garden"><div class="plant" id="plant">🌱</div><div><b>わたしの植物</b><div class="note">雨粒を5つ集めると成長します。</div></div><button onclick="water()">育てる</button></div>
+</section>
+<div class="toast" id="toast"></div>
+</main>
+<script>
+let drops=3, level=0;
+function msg(t){let x=document.getElementById('toast');x.textContent=t;x.style.display='block';setTimeout(()=>x.style.display='none',1800)}
+function drop(el){drops++;document.getElementById('drops').textContent=drops;el.remove();msg('雨粒を見つけた！ 💧')}
+function treasure(el){el.textContent='✨';msg(Math.random()>.5?'宝箱からクーポンをGET！ 🎟️':'育成アイテムをGET！ 🌿')}
+function water(){if(drops<5)return msg('雨粒をあと '+(5-drops)+' つ集めよう');drops-=5;document.getElementById('drops').textContent=drops;level++;document.getElementById('plant').textContent=level>1?'🌳':'🪴';msg('植物が育った！')}
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script></body></html>
