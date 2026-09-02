@@ -112,6 +112,18 @@ html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui
 .swatch.r3{background:rgba(20,95,210,.58)}
 .swatch.dry{background:rgba(150,160,170,.07)}
 
+
+.namebox{display:flex;gap:8px;margin-top:12px}
+.namebox input{
+ flex:1;border:1px solid rgba(255,255,255,.16);background:#071b2d;color:#fff;
+ border-radius:12px;padding:10px 11px;font-size:12px;outline:none
+}
+.namebox button{
+ border:0;border-radius:12px;padding:10px 13px;background:#79cef7;color:#092039;
+ font-weight:800;font-size:11px
+}
+.plantname{font-weight:900;font-size:16px;margin-top:6px}
+
 </style>
 </head>
 <body><div id="app">
@@ -148,8 +160,17 @@ html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui
 
 <div id="gardenPanel" class="panel">
  <h2>GARDEN</h2>
- <div class="card garden"><div>集めた雨で育つ、わたしの植物</div><div class="plant" id="plant">🌱</div>
- <div class="bar"><div id="growbar"></div></div><p id="gardenText">雨粒を5つ集めると成長します。</p></div>
+ <div class="card garden">
+ <div>集めた雨で育つ、わたしの植物</div>
+ <div class="plantname" id="plantNameLabel">なまえ未設定</div>
+ <div class="plant" id="plant">🌱</div>
+ <div class="bar"><div id="growbar"></div></div>
+ <p id="gardenText">最初は雨粒1個で成長。次は3個、その次は5個…と少しずつ必要数が増えます。</p>
+ <div class="namebox">
+   <input id="plantNameInput" maxlength="12" placeholder="植物に名前をつける">
+   <button onclick="savePlantName()">決定</button>
+ </div>
+ </div>
 </div>
 
 <div id="collectionPanel" class="panel">
@@ -176,7 +197,9 @@ const GET_DISTANCE=20;
 let map,me,myLat=34.9858,myLng=135.7588;
 const API_BASE='https://rain-treasure-api.ozaki-daichi-72u.workers.dev';
 let weatherLayer=null, mode='local', localItems=[], nationalMarkers=[], rainCells=[], scanToken=0;
-let counts={drop:0,chest:0,rare:0}, gardenLevel=0;
+let counts=JSON.parse(localStorage.getItem('rainTreasureCounts')||'{"drop":0,"chest":0,"rare":0}');
+let gardenLevel=0;
+let plantName=localStorage.getItem('rainTreasurePlantName')||'';
 const cities=[
  ['札幌',43.0618,141.3545],['仙台',38.2682,140.8694],['東京',35.6762,139.6503],
  ['横浜',35.4437,139.6380],['名古屋',35.1815,136.9066],['京都',35.0116,135.7681],
@@ -191,6 +214,8 @@ function init(){
  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(map);
  setMe(myLat,myLng);
  connectWeather();
+ syncCounts();
+ renderPlantName();
  locate();
 }
 function setMe(lat,lng){
@@ -286,19 +311,63 @@ function addItem(type,lat,lng){
 function take(o){
  if(o.taken)return;const d=Math.round(dist(myLat,myLng,o.lat,o.lng));
  if(d>GET_DISTANCE){msg(`あと ${d}m。近くまで歩いてみよう！`);return}
- o.taken=true;map.removeLayer(o.marker);counts[o.type]++;syncCounts();
+ o.taken=true;map.removeLayer(o.marker);counts[o.type]++;
+ localStorage.setItem('rainTreasureCounts',JSON.stringify(counts));
+ syncCounts();
  if(o.type==='chest')document.getElementById('coupons').textContent=counts.chest;
- msg(o.type==='drop'?'雨粒をGET！ 💧':o.type==='chest'?'宝箱をGET！ クーポン入り 🎁':'レアアイテムをGET！ 🌱');
+ if(o.type==='drop'){
+   const growthPoints=[1,4,9,16,25];
+   if(growthPoints.includes(counts.drop)){
+     msg('雨粒をGET！ 植物が成長した！ 🌿');
+   }else{
+     const next=growthPoints.find(x=>x>counts.drop) || counts.drop+11;
+     msg(`雨粒をGET！ あと ${next-counts.drop} 個で成長 💧`);
+   }
+ }else if(o.type==='chest'){
+   msg('宝箱をGET！ クーポン入り 🎁');
+ }else{
+   msg('レアアイテムをGET！ 🌱');
+ }
 }
 function syncCounts(){
  for(const k of ['drop','chest','rare']){
   document.getElementById(k==='drop'?'drops':k==='chest'?'chests':'rares').textContent=counts[k];
   document.getElementById(k==='drop'?'cdrops':k==='chest'?'cchests':'crares').textContent=counts[k];
  }
- let pct=Math.min(100,(counts.drop%5)*20);document.getElementById('growbar').style.width=pct+'%';
- if(counts.drop>=5){gardenLevel=Math.floor(counts.drop/5);document.getElementById('plant').textContent=gardenLevel>=2?'🌳':'🪴';}
-}
-function setMode(m){
+ document.getElementById('coupons').textContent=counts.chest;
+
+ const thresholds=[0,1,4,9,16,25];
+ const plants=['🌱','🪴','🌿','🌳','🌸','🌺'];
+
+ gardenLevel=0;
+ for(let i=1;i<thresholds.length;i++){
+   if(counts.drop>=thresholds[i]) gardenLevel=i;
+ }
+ document.getElementById('plant').textContent=plants[gardenLevel];
+
+ let nextTarget=null;
+ for(let i=1;i<thresholds.length;i++){
+   if(counts.drop<thresholds[i]){nextTarget=thresholds[i];break}
+ }
+ if(nextTarget===null){
+   nextTarget=thresholds[thresholds.length-1]+11;
+ }
+ const need=nextTarget-counts.drop;
+ const prevTarget=thresholds[Math.min(gardenLevel,thresholds.length-1)];
+ const range=nextTarget-prevTarget;
+ const progressed=Math.max(0,counts.drop-prevTarget);
+ const pct=Math.min(100,(progressed/range)*100);
+ document.getElementById('growbar').style.width=pct+'%';
+
+ const name=plantName||'この植物';
+ if(counts.drop===0){
+   document.getElementById('gardenText').textContent=
+     `${name}はまだ芽が出たばかり。最初の雨粒1個で成長します。`;
+ }else{
+   document.getElementById('gardenText').textContent=
+     `${name}：雨粒 ${counts.drop} 個。あと ${need} 個で次の成長！`;
+ }
+}function setMode(m){
  mode=m;
  document.getElementById('localBtn').classList.toggle('active',m==='local');
  document.getElementById('japanBtn').classList.toggle('active',m==='japan');
@@ -343,6 +412,24 @@ function addCity(name,lat,lng,raining){
  });
 }
 function goToMe(){setMode('local');map.flyTo([myLat,myLng],14,{duration:.7});setTimeout(scanLocalArea,800)}
+
+function renderPlantName(){
+ const label=document.getElementById('plantNameLabel');
+ const input=document.getElementById('plantNameInput');
+ if(label)label.textContent=plantName||'なまえ未設定';
+ if(input)input.value=plantName;
+}
+function savePlantName(){
+ const input=document.getElementById('plantNameInput');
+ const v=(input.value||'').trim();
+ if(!v){msg('名前を入力してね');return}
+ plantName=v;
+ localStorage.setItem('rainTreasurePlantName',plantName);
+ renderPlantName();
+ syncCounts();
+ msg(`${plantName} と名付けました 🌱`);
+}
+
 function showPanel(p){
  document.getElementById('gardenPanel').classList.toggle('show',p==='garden');
  document.getElementById('collectionPanel').classList.toggle('show',p==='collection');
