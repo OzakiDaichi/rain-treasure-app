@@ -99,6 +99,19 @@ html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui
 .garden{text-align:center}.plant{font-size:85px;margin:15px}
 .bar{height:9px;border-radius:10px;background:#203b51;overflow:hidden}.bar>div{height:100%;background:#78da9a;width:0%}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.mini{text-align:center}.mini .emoji{font-size:35px}
+
+.rainlegend{
+ position:absolute;z-index:1001;right:12px;top:120px;background:rgba(8,29,48,.88);
+ border:1px solid rgba(255,255,255,.12);border-radius:15px;padding:9px 10px;
+ font-size:10px;line-height:1.6;backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.18)
+}
+.legendrow{display:flex;align-items:center;gap:6px}
+.swatch{width:13px;height:13px;border-radius:4px;border:1px solid rgba(255,255,255,.35)}
+.swatch.r1{background:rgba(80,180,255,.22)}
+.swatch.r2{background:rgba(45,145,240,.38)}
+.swatch.r3{background:rgba(20,95,210,.58)}
+.swatch.dry{background:rgba(150,160,170,.07)}
+
 </style>
 </head>
 <body><div id="app">
@@ -106,7 +119,7 @@ html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui
 
 <div class="top"><div class="toprow">
   <div class="brand">☔ 雨の日だけの宝探し</div>
-  <div class="weatherBadge"><span class="dot"></span><span class="live">LIVE PRECIPITATION</span><br><span id="radarState">サーバー接続待ち</span></div>
+  <div class="weatherBadge"><span class="dot"></span><span class="live">LIVE WEATHER</span><br><span id="radarState">サーバー接続待ち</span></div>
 </div></div>
 
 <div class="modebar">
@@ -116,11 +129,19 @@ html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui
 
 <div class="counter">💧 <span id="drops">0</span>　🎁 <span id="chests">0</span>　🌱 <span id="rares">0</span></div>
 
+<div class="rainlegend" id="rainLegend">
+ <div><b>推定雨エリア</b></div>
+ <div class="legendrow"><span class="swatch r1"></span>弱い雨</div>
+ <div class="legendrow"><span class="swatch r2"></span>雨</div>
+ <div class="legendrow"><span class="swatch r3"></span>強い雨</div>
+</div>
+
+
 <button class="locate" onclick="goToMe()">◎</button>
 
 <div class="sheet" id="sheet">
  <b id="status">位置情報を取得しています…</b>
- <p id="substatus">サーバー経由で実際の降水データを取得します。</p>
+ <p id="substatus">サーバー経由で各地点の現在の雨を判定します。</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -154,7 +175,7 @@ html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui
 const GET_DISTANCE=20;
 let map,me,myLat=34.9858,myLng=135.7588;
 const API_BASE='https://rain-treasure-api.ozaki-daichi-72u.workers.dev';
-let weatherLayer=null, mode='local', localItems=[], nationalMarkers=[];
+let weatherLayer=null, mode='local', localItems=[], nationalMarkers=[], rainCells=[], scanToken=0;
 let counts={drop:0,chest:0,rare:0}, gardenLevel=0;
 const cities=[
  ['札幌',43.0618,141.3545],['仙台',38.2682,140.8694],['東京',35.6762,139.6503],
@@ -178,31 +199,84 @@ function setMe(lat,lng){
  if(me)me.setLatLng([lat,lng]); else me=L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(map).bindTooltip('現在地');
 }
 function locate(){
- if(!navigator.geolocation){spawnLocal();return}
+ if(!navigator.geolocation){scanLocalArea();return}
  navigator.geolocation.getCurrentPosition(p=>{
-   setMe(p.coords.latitude,p.coords.longitude); if(mode==='local')map.setView([myLat,myLng],13); spawnLocal();
+   setMe(p.coords.latitude,p.coords.longitude); if(mode==='local')map.setView([myLat,myLng],13); scanLocalArea();
    navigator.geolocation.watchPosition(q=>setMe(q.coords.latitude,q.coords.longitude),()=>{}, {enableHighAccuracy:true,maximumAge:4000});
- },()=>{spawnLocal();msg('位置情報を取得できないためデモ位置です');},{enableHighAccuracy:true,timeout:10000});
+ },()=>{scanLocalArea();msg('位置情報を取得できないためデモ位置です');},{enableHighAccuracy:true,timeout:10000});
 }
 function connectWeather(){
- if(weatherLayer)map.removeLayer(weatherLayer);
- weatherLayer=L.tileLayer(`${API_BASE}/tile/{z}/{x}/{y}.png`,{
-   opacity:.62,maxZoom:19,attribution:'OpenWeather'
- }).addTo(map);
- document.getElementById('radarState').textContent='実降水レイヤー接続中';
+ document.getElementById('radarState').textContent='現在天気データ接続中';
  if(mode==='japan')loadJapanStatus();
 }
-function spawnLocal(){
+function clearDetailedWeather(){
+ rainCells.forEach(x=>map.removeLayer(x));rainCells=[];
  localItems.forEach(x=>map.removeLayer(x.marker));localItems=[];
- // 実データの上にゲーム用アイテムを配置するプロトタイプ。
- // 雨量ピクセル自体の自動判定は行わず、現在地周辺の複数地点へ配置。
- const pts=[
-  ['drop',.0012,.0010],['chest',.0030,-.0022],['drop',-.0025,.0025],
-  ['rare',-.0040,-.0026],['chest',.0050,.0040],['drop',-.005,.005]
- ];
- pts.forEach(p=>addItem(p[0],myLat+p[1],myLng+p[2]));
- document.getElementById('status').textContent='実際の降水レイヤーを表示しています。';
 }
+function rainInfo(j){
+ const mm=Number((j.rain&&j.rain['1h'])||(j.rain&&j.rain['3h']?j.rain['3h']/3:0)||0);
+ const main=(j.weather&&j.weather[0]&&j.weather[0].main)||'';
+ const raining=['Rain','Drizzle','Thunderstorm'].includes(main)||mm>0;
+ return {raining,mm};
+}
+function cellStyle(mm){
+ if(mm>=4)return {fillColor:'#145fd2',fillOpacity:.58,color:'#60baff',weight:1};
+ if(mm>=1)return {fillColor:'#2d91f0',fillOpacity:.38,color:'#79c8ff',weight:1};
+ return {fillColor:'#50b4ff',fillOpacity:.22,color:'#9bd9ff',weight:1};
+}
+async function scanWeatherGrid(centerLat,centerLng,label='現在地周辺',gridN=5,step=.018){
+ const token=++scanToken;
+ clearDetailedWeather();
+ document.getElementById('status').textContent=`${label}の雨を細かく確認中…`;
+ document.getElementById('substatus').textContent='約2km間隔の地点を読み取り、雨エリアと宝物を配置しています。';
+
+ const half=Math.floor(gridN/2), jobs=[];
+ for(let iy=-half;iy<=half;iy++){
+  for(let ix=-half;ix<=half;ix++){
+   const lat=centerLat+iy*step, lng=centerLng+ix*step;
+   jobs.push((async()=>{
+    try{
+     const r=await fetch(`${API_BASE}/weather?lat=${lat}&lon=${lng}`);
+     if(!r.ok)throw new Error(r.status);
+     const j=await r.json(), info=rainInfo(j);
+     return {lat,lng,...info};
+    }catch(e){return {lat,lng,raining:false,mm:0,error:true}}
+   })());
+  }
+ }
+ const cells=await Promise.all(jobs);
+ if(token!==scanToken)return;
+
+ let rainyCount=0,itemCount=0;
+ for(const c of cells){
+  if(!c.raining)continue;
+  rainyCount++;
+  const halfStep=step/2;
+  const rect=L.rectangle(
+   [[c.lat-halfStep,c.lng-halfStep],[c.lat+halfStep,c.lng+halfStep]],
+   cellStyle(c.mm)
+  ).addTo(map);
+  rect.bindTooltip(`☔ ${c.mm?c.mm.toFixed(1)+' mm/h':'雨'}<br>宝物出現エリア`);
+  rainCells.push(rect);
+
+  // Each rainy ~2 km cell gets many walkable treasures.
+  const n=c.mm>=4?8:c.mm>=1?6:4;
+  for(let k=0;k<n;k++){
+   const lat=c.lat+(Math.random()-.5)*step*.82;
+   const lng=c.lng+(Math.random()-.5)*step*.82;
+   const r=Math.random();
+   const type=r<.58?'drop':r<.90?'chest':'rare';
+   addItem(type,lat,lng);
+   itemCount++;
+  }
+ }
+ document.getElementById('status').textContent=
+   rainyCount?`${label}：雨エリア ${rainyCount} 区画 / 宝物 ${itemCount} 個`:`${label}：現在、雨エリアは見つかりませんでした`;
+ document.getElementById('substatus').textContent=
+   rainyCount?'青い区画が現在の雨データから推定した雨エリアです。濃いほど雨が強く、宝物は雨区画内だけに出現します。':
+   'この範囲では雨が検出されなかったため、宝物は出現していません。';
+}
+function scanLocalArea(){scanWeatherGrid(myLat,myLng,'現在地周辺',5,.018)}
 function addItem(type,lat,lng){
  const e={drop:'💧',chest:'🎁',rare:'🌱'}[type];
  const icon=L.divIcon({className:'itemwrap',html:`<div class="item ${type}">${e}</div>`,iconSize:[43,43],iconAnchor:[21,21]});
@@ -225,9 +299,20 @@ function syncCounts(){
  if(counts.drop>=5){gardenLevel=Math.floor(counts.drop/5);document.getElementById('plant').textContent=gardenLevel>=2?'🌳':'🪴';}
 }
 function setMode(m){
- mode=m;document.getElementById('localBtn').classList.toggle('active',m==='local');document.getElementById('japanBtn').classList.toggle('active',m==='japan');
- if(m==='japan'){map.flyTo([36.2,138.2],5,{duration:.8});document.getElementById('status').textContent='日本全国の雨と宝物の出現状況';loadJapanStatus();}
- else{nationalMarkers.forEach(x=>map.removeLayer(x));nationalMarkers=[];map.flyTo([myLat,myLng],13,{duration:.8});document.getElementById('status').textContent='現在地周辺の宝物';}
+ mode=m;
+ document.getElementById('localBtn').classList.toggle('active',m==='local');
+ document.getElementById('japanBtn').classList.toggle('active',m==='japan');
+ if(m==='japan'){
+  clearDetailedWeather();
+  map.flyTo([36.2,138.2],5,{duration:.8});
+  document.getElementById('status').textContent='日本全国の雨の入口';
+  document.getElementById('substatus').textContent='雨の都市をタップすると、街レベルの雨エリアと宝物まで拡大します。';
+  loadJapanStatus();
+ }else{
+  nationalMarkers.forEach(x=>map.removeLayer(x));nationalMarkers=[];
+  map.flyTo([myLat,myLng],13,{duration:.8});
+  scanLocalArea();
+ }
 }
 async function loadJapanStatus(){
  nationalMarkers.forEach(x=>map.removeLayer(x));nationalMarkers=[];
@@ -244,16 +329,20 @@ async function loadJapanStatus(){
   }catch(e){addCity(c[0],c[1],c[2],null)}
  });
  await Promise.all(jobs);
- document.getElementById('substatus').textContent='青い都市では雨に連動して宝物が出現中。遠隔地では閲覧のみです。';
+ document.getElementById('substatus').textContent='☔の都市をタップすると街までズームし、雨区画と宝物を細かく表示します。';
 }
 function addCity(name,lat,lng,raining){
- const count=raining?Math.floor(3+Math.random()*8):0;
- const text=raining?`<b>☔ ${name}</b>🎁 ${count} 出現中`:`<b>${name}</b>${raining===false?'☀️ 出現なし':'… 確認待ち'}`;
+ const text=raining?`<b>☔ ${name}</b>雨エリアあり`:`<b>${name}</b>${raining===false?'☀️ 雨なし':'… 確認待ち'}`;
  const icon=L.divIcon({className:'citywrap',html:`<div class="citymarker ${raining?'raining':''}">${text}</div>`,iconSize:[82,40],iconAnchor:[41,20]});
  const m=L.marker([lat,lng],{icon,interactive:true}).addTo(map);nationalMarkers.push(m);
- m.on('click',()=>msg(raining?`${name}：雨の日の宝物が ${count} 個出現中`:`${name}：現在は宝物なし`));
+ m.on('click',()=>{
+   if(!raining){msg(`${name}：現在は雨が検出されていません`);return}
+   nationalMarkers.forEach(x=>map.removeLayer(x));nationalMarkers=[];
+   map.flyTo([lat,lng],11,{duration:.8});
+   scanWeatherGrid(lat,lng,name,5,.022);
+ });
 }
-function goToMe(){setMode('local');map.flyTo([myLat,myLng],15,{duration:.7})}
+function goToMe(){setMode('local');map.flyTo([myLat,myLng],14,{duration:.7});setTimeout(scanLocalArea,800)}
 function showPanel(p){
  document.getElementById('gardenPanel').classList.toggle('show',p==='garden');
  document.getElementById('collectionPanel').classList.toggle('show',p==='collection');
