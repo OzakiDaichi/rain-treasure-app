@@ -106,7 +106,7 @@ html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui
 
 <div class="top"><div class="toprow">
   <div class="brand">☔ 雨の日だけの宝探し</div>
-  <div class="weatherBadge"><span class="dot"></span><span class="live">LIVE PRECIPITATION</span><br><span id="radarState">API未接続</span></div>
+  <div class="weatherBadge"><span class="dot"></span><span class="live">LIVE PRECIPITATION</span><br><span id="radarState">サーバー接続待ち</span></div>
 </div></div>
 
 <div class="modebar">
@@ -116,12 +116,11 @@ html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui
 
 <div class="counter">💧 <span id="drops">0</span>　🎁 <span id="chests">0</span>　🌱 <span id="rares">0</span></div>
 
-<button class="keybtn" onclick="openKey()">🔑</button>
 <button class="locate" onclick="goToMe()">◎</button>
 
 <div class="sheet" id="sheet">
  <b id="status">位置情報を取得しています…</b>
- <p id="substatus">APIキーを設定するとOpenWeatherの実降水レイヤーを表示します。</p>
+ <p id="substatus">サーバー経由で実際の降水データを取得します。</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -148,19 +147,13 @@ html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui
  <button id="collectionNav" onclick="showPanel('collection')"><span>🎒</span>COLLECTION</button>
 </div>
 
-<div class="modal" id="keyModal"><div class="modalbox">
- <h2>OpenWeather APIキー</h2>
- <p>この端末のブラウザ内にだけ保存します。公開GitHubのコードには書き込みません。</p>
- <input id="keyInput" type="password" placeholder="APIキーを入力">
- <div class="actions"><button class="cancel" onclick="closeKey()">キャンセル</button><button class="save" onclick="saveKey()">接続する</button></div>
-</div></div>
-
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const GET_DISTANCE=20;
-let map,me,myLat=34.9858,myLng=135.7588,apiKey=localStorage.getItem('owmKey')||'';
+let map,me,myLat=34.9858,myLng=135.7588;
+const API_BASE='https://rain-treasure-api.ozaki-daichi-72u.workers.dev';
 let weatherLayer=null, mode='local', localItems=[], nationalMarkers=[];
 let counts={drop:0,chest:0,rare:0}, gardenLevel=0;
 const cities=[
@@ -176,7 +169,7 @@ function init(){
  map=L.map('map',{zoomControl:false}).setView([myLat,myLng],13);
  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,attribution:'&copy; OpenStreetMap &copy; CARTO'}).addTo(map);
  setMe(myLat,myLng);
- if(apiKey) connectWeather();
+ connectWeather();
  locate();
 }
 function setMe(lat,lng){
@@ -193,7 +186,7 @@ function locate(){
 }
 function connectWeather(){
  if(weatherLayer)map.removeLayer(weatherLayer);
- weatherLayer=L.tileLayer(`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${apiKey}`,{
+ weatherLayer=L.tileLayer(`${API_BASE}/tile/{z}/{x}/{y}.png`,{
    opacity:.62,maxZoom:19,attribution:'OpenWeather'
  }).addTo(map);
  document.getElementById('radarState').textContent='実降水レイヤー接続中';
@@ -208,7 +201,7 @@ function spawnLocal(){
   ['rare',-.0040,-.0026],['chest',.0050,.0040],['drop',-.005,.005]
  ];
  pts.forEach(p=>addItem(p[0],myLat+p[1],myLng+p[2]));
- document.getElementById('status').textContent=apiKey?'実際の降水レイヤーを表示しています。':'APIキーを設定すると実際の降水を表示できます。';
+ document.getElementById('status').textContent='実際の降水レイヤーを表示しています。';
 }
 function addItem(type,lat,lng){
  const e={drop:'💧',chest:'🎁',rare:'🌱'}[type];
@@ -238,15 +231,11 @@ function setMode(m){
 }
 async function loadJapanStatus(){
  nationalMarkers.forEach(x=>map.removeLayer(x));nationalMarkers=[];
- if(!apiKey){
-  document.getElementById('substatus').textContent='APIキーを接続すると主要都市の現在の雨を判定します。';
-  cities.forEach(c=>addCity(c[0],c[1],c[2],null));
-  return;
- }
+
  document.getElementById('substatus').textContent='主要都市の現在の降水状況を取得中…';
  const jobs=cities.map(async c=>{
   try{
-   const r=await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${c[1]}&lon=${c[2]}&appid=${apiKey}&units=metric&lang=ja`);
+   const r=await fetch(`${API_BASE}/weather?lat=${c[1]}&lon=${c[2]}`);
    if(!r.ok)throw new Error(r.status);
    const j=await r.json();
    const main=(j.weather&&j.weather[0]&&j.weather[0].main)||'';
@@ -265,12 +254,6 @@ function addCity(name,lat,lng,raining){
  m.on('click',()=>msg(raining?`${name}：雨の日の宝物が ${count} 個出現中`:`${name}：現在は宝物なし`));
 }
 function goToMe(){setMode('local');map.flyTo([myLat,myLng],15,{duration:.7})}
-function openKey(){document.getElementById('keyInput').value=apiKey;document.getElementById('keyModal').classList.add('show')}
-function closeKey(){document.getElementById('keyModal').classList.remove('show')}
-function saveKey(){
- const v=document.getElementById('keyInput').value.trim();if(!v)return msg('APIキーを入力してください');
- apiKey=v;localStorage.setItem('owmKey',apiKey);closeKey();connectWeather();msg('OpenWeatherに接続しました');if(mode==='japan')loadJapanStatus();
-}
 function showPanel(p){
  document.getElementById('gardenPanel').classList.toggle('show',p==='garden');
  document.getElementById('collectionPanel').classList.toggle('show',p==='collection');
