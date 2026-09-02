@@ -7,160 +7,102 @@
 <title>雨の日だけの宝探し</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root{
-  --ink:#183449; --muted:#6f8495; --blue:#4c9ce2;
-  --panel:rgba(255,255,255,.94);
-}
+:root{--ink:#17344a;--muted:#6d8395;--blue:#438fd4;--glass:rgba(255,255,255,.94)}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;font-family:"Hiragino Sans","Yu Gothic",system-ui,sans-serif;background:#eef7ff;color:var(--ink)}
-#app{max-width:430px;height:100dvh;margin:auto;position:relative;overflow:hidden;background:white}
-#map{position:absolute;inset:0}
-.leaflet-control-attribution{font-size:8px!important}
-
-.top{
- position:absolute;z-index:1000;left:14px;right:14px;top:14px;
- display:flex;justify-content:space-between;gap:10px;pointer-events:none
-}
-.logo,.radar{
- background:var(--panel);backdrop-filter:blur(10px);border-radius:18px;
- box-shadow:0 7px 22px rgba(35,76,108,.18)
-}
-.logo{padding:11px 14px;font-weight:800;font-size:16px}
-.radar{padding:9px 12px;font-size:11px;color:#557084;text-align:right}
-.live{font-weight:800;color:#2e86d1}
-.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4c9ce2;margin-right:5px;box-shadow:0 0 0 4px rgba(76,156,226,.15)}
-
-.legend{
- position:absolute;z-index:1000;left:14px;bottom:102px;background:var(--panel);
- padding:10px 12px;border-radius:16px;box-shadow:0 6px 18px rgba(35,76,108,.15);
- font-size:11px;line-height:1.8
-}
-.swatch{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;margin-right:6px}
-.rain-swatch{background:rgba(60,145,230,.36);border:1px solid rgba(60,145,230,.55)}
-.clear-swatch{background:rgba(255,255,255,.9);border:1px solid #cfdce5}
-
-.locate{
- position:absolute;z-index:1001;right:16px;bottom:108px;width:50px;height:50px;border:0;border-radius:50%;
- background:white;box-shadow:0 7px 20px rgba(35,76,108,.22);font-size:23px;cursor:pointer
-}
-
-.bottom{
- position:absolute;z-index:1000;left:12px;right:12px;bottom:14px;
- background:var(--panel);backdrop-filter:blur(12px);border-radius:22px;padding:13px 15px;
- box-shadow:0 8px 26px rgba(35,76,108,.2)
-}
-.bottom b{font-size:14px}
-.bottom p{margin:3px 0 0;font-size:11px;color:var(--muted);line-height:1.5}
-
-.rain-label{
- background:rgba(43,120,194,.88);color:#fff;border:0;border-radius:14px;
- padding:5px 9px;font-weight:700;font-size:11px;box-shadow:0 3px 10px rgba(19,74,124,.2)
-}
-.rain-label:before{display:none}
-.user-dot{
- width:18px;height:18px;border-radius:50%;background:#1877d2;border:4px solid #fff;
- box-shadow:0 0 0 5px rgba(24,119,210,.2),0 2px 8px rgba(0,0,0,.25)
-}
-.loading{
- position:absolute;z-index:2000;inset:0;background:#f6fbff;display:grid;place-items:center;text-align:center;padding:30px
-}
-.loading h2{margin:0 0 8px}.loading p{margin:0;color:#6f8495;font-size:13px;line-height:1.6}
-</style>
-</head>
-<body>
-<div id="app">
-  <div id="map"></div>
-
-  <div class="top">
-    <div class="logo">☔ 雨の日だけの宝探し</div>
-    <div class="radar"><span class="pulse"></span><span class="live">RAIN RADAR</span><br>更新 2分前</div>
-  </div>
-
-  <div class="legend">
-    <div><span class="swatch rain-swatch"></span>雨が降っているエリア</div>
-    <div><span class="swatch clear-swatch"></span>雨が降っていないエリア</div>
-  </div>
-
-  <button class="locate" onclick="goToMe()" aria-label="現在地へ">◎</button>
-
-  <div class="bottom">
-    <b id="status">現在地を取得しています…</b>
-    <p>このVer.2では雨雲を疑似表示しています。実装時はリアルタイムの雨雲レーダー情報と連携します。</p>
-  </div>
-
-  <div class="loading" id="loading">
-    <div><h2>現在地を探しています ☔</h2><p>位置情報の利用を「許可」してください。<br>あなたの周りに疑似的な雨雲を表示します。</p></div>
-  </div>
+#app{max-width:430px;height:100dvh;margin:auto;position:relative;overflow:hidden;background:#fff}
+#map{position:absolute;inset:0}.leaflet-control-attribution{font-size:8px!important}
+.top{position:absolute;z-index:1000;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.logo,.radar{background:var(--glass);backdrop-filter:blur(10px);border-radius:17px;box-shadow:0 7px 22px rgba(35,76,108,.18)}
+.logo{padding:11px 13px;font-weight:800;font-size:15px}.radar{padding:8px 10px;font-size:10px;color:#557084;text-align:right}
+.live{font-weight:800;color:#2e86d1}.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4c9ce2;margin-right:5px;box-shadow:0 0 0 4px rgba(76,156,226,.15)}
+.stats{position:absolute;z-index:1000;top:76px;left:12px;background:var(--glass);border-radius:15px;padding:8px 11px;box-shadow:0 5px 16px rgba(35,76,108,.14);font-size:12px;font-weight:800}
+.legend{position:absolute;z-index:1000;left:12px;bottom:98px;background:var(--glass);padding:8px 10px;border-radius:14px;box-shadow:0 5px 16px rgba(35,76,108,.14);font-size:10px;line-height:1.8}
+.sw{display:inline-block;width:11px;height:11px;border-radius:4px;vertical-align:-2px;margin-right:5px}.rain{background:rgba(61,145,226,.34);border:1px solid #69a9e3}.clear{background:#fff;border:1px solid #ccd9e2}
+.locate{position:absolute;z-index:1001;right:14px;bottom:103px;width:48px;height:48px;border:0;border-radius:50%;background:#fff;box-shadow:0 7px 20px rgba(35,76,108,.22);font-size:22px}
+.bottom{position:absolute;z-index:1000;left:10px;right:10px;bottom:10px;background:var(--glass);backdrop-filter:blur(12px);border-radius:20px;padding:12px 14px;box-shadow:0 8px 26px rgba(35,76,108,.2)}
+.bottom b{font-size:13px}.bottom p{margin:3px 0 0;font-size:10px;color:var(--muted)}
+.user-dot{width:18px;height:18px;border-radius:50%;background:#1877d2;border:4px solid white;box-shadow:0 0 0 5px rgba(24,119,210,.2),0 2px 8px #777}
+.item-wrap{background:transparent;border:0}.item{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:24px;background:#fff;border:2px solid #fff;box-shadow:0 7px 18px rgba(31,80,118,.25);animation:bob 2s ease-in-out infinite;cursor:pointer}
+.item.drop{background:#e5f5ff}.item.chest{background:#fff1bf}.item.rare{background:#e9f7df}@keyframes bob{50%{transform:translateY(-6px)}}
+.rain-label{background:rgba(43,120,194,.88);color:#fff;border:0;border-radius:13px;padding:4px 8px;font-weight:700;font-size:10px}.rain-label:before{display:none}
+.toast{position:absolute;z-index:2000;left:50%;bottom:112px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;transition:.22s;background:rgba(20,48,69,.93);color:white;padding:11px 15px;border-radius:16px;white-space:nowrap;font-size:12px;box-shadow:0 7px 20px rgba(0,0,0,.18)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.loading{position:absolute;z-index:3000;inset:0;background:#f6fbff;display:grid;place-items:center;text-align:center;padding:30px}.loading h2{margin:0 0 8px}.loading p{margin:0;color:#6f8495;font-size:13px;line-height:1.6}
+</style></head>
+<body><div id="app">
+<div id="map"></div>
+<div class="top"><div class="logo">☔ 雨の日だけの宝探し</div><div class="radar"><span class="pulse"></span><span class="live">RAIN RADAR</span><br>更新 2分前</div></div>
+<div class="stats">💧 <span id="drops">0</span>　🎁 <span id="chests">0</span>　🌱 <span id="rares">0</span></div>
+<div class="legend"><div><span class="sw rain"></span>雨エリア：アイテム出現</div><div><span class="sw clear"></span>晴れエリア：アイテムなし</div></div>
+<button class="locate" onclick="goToMe()">◎</button>
+<div class="bottom"><b id="status">現在地を取得しています…</b><p>アイテムは現在地から20m以内でGETできます。</p></div>
+<div class="toast" id="toast"></div>
+<div class="loading" id="loading"><div><h2>現在地を探しています ☔</h2><p>位置情報の利用を「許可」してください。<br>あなたの周りに雨雲と宝物をつくります。</p></div></div>
 </div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-let map, me, myLat, myLng, rainLayers=[];
+let map,me,myLat,myLng,watchId;
+let counts={drop:0,chest:0,rare:0};
+const items=[];
+const GET_DISTANCE=20;
 
+function distanceMeters(a,b,c,d){
+ const R=6371000, rad=x=>x*Math.PI/180;
+ const p1=rad(a),p2=rad(c),dp=rad(c-a),dl=rad(d-b);
+ const h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+ return 2*R*Math.asin(Math.sqrt(h));
+}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');clearTimeout(window.tt);window.tt=setTimeout(()=>e.classList.remove('show'),2200)}
 function init(lat,lng){
-  myLat=lat; myLng=lng;
-  map=L.map('map',{zoomControl:false}).setView([lat,lng],13);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    maxZoom:19,
-    attribution:'&copy; OpenStreetMap contributors'
-  }).addTo(map);
-
-  const meIcon=L.divIcon({className:'',html:'<div class="user-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]});
-  me=L.marker([lat,lng],{icon:meIcon,zIndexOffset:1000}).addTo(map).bindTooltip('現在地',{direction:'top'});
-
-  drawPseudoRain(lat,lng);
-
-  document.getElementById('status').textContent='あなたの周辺に、雨のエリアが現れました。';
-  document.getElementById('loading').style.display='none';
+ myLat=lat;myLng=lng;
+ map=L.map('map',{zoomControl:false}).setView([lat,lng],13);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+ const icon=L.divIcon({className:'',html:'<div class="user-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]});
+ me=L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(map).bindTooltip('現在地');
+ makeWorld(lat,lng);
+ document.getElementById('loading').style.display='none';
+ document.getElementById('status').textContent='雨雲の中に宝物が出現しています。';
+ if(navigator.geolocation) watchId=navigator.geolocation.watchPosition(updatePos,()=>{}, {enableHighAccuracy:true,maximumAge:3000});
 }
-
-function drawPseudoRain(lat,lng){
-  rainLayers.forEach(x=>map.removeLayer(x)); rainLayers=[];
-
-  // 現在地から少し離れた位置に2つの疑似雨雲を生成
-  const zones=[
-    {lat:lat+0.012,lng:lng+0.018,r:1450,name:'雨エリア A'},
-    {lat:lat-0.017,lng:lng-0.020,r:1100,name:'雨エリア B'}
-  ];
-
-  zones.forEach((z,i)=>{
-    // 複数の半透明円を重ね、雨雲レーダーらしい不定形にする
-    const offsets=[
-      [0,0,1],[0.004,0.005,.78],[-0.003,0.006,.68],[0.003,-0.006,.7],[-0.004,-0.004,.6]
-    ];
-    offsets.forEach(o=>{
-      const c=L.circle([z.lat+o[0],z.lng+o[1]],{
-        radius:z.r*o[2],
-        color:'#4697df',weight:1,
-        fillColor:'#5aa9ed',fillOpacity:.18
-      }).addTo(map);
-      rainLayers.push(c);
-    });
-
-    const label=L.tooltip({permanent:true,direction:'center',className:'rain-label',offset:[0,0]})
-      .setLatLng([z.lat,z.lng]).setContent('☔ '+z.name).addTo(map);
-    rainLayers.push(label);
+function makeWorld(lat,lng){
+ const zones=[
+  {lat:lat+0.010,lng:lng+0.013,r:1300,name:'雨エリア A'},
+  {lat:lat-0.014,lng:lng-0.016,r:1050,name:'雨エリア B'}
+ ];
+ zones.forEach((z,zi)=>{
+  [[0,0,1],[.0035,.0045,.78],[-.003,.005,.67],[.003,-.005,.7],[-.004,-.003,.6]].forEach(o=>{
+   L.circle([z.lat+o[0],z.lng+o[1]],{radius:z.r*o[2],color:'#4697df',weight:1,fillColor:'#5aa9ed',fillOpacity:.18,interactive:false}).addTo(map);
   });
+  L.tooltip({permanent:true,direction:'center',className:'rain-label'}).setLatLng([z.lat,z.lng]).setContent('☔ '+z.name).addTo(map);
+  const specs=zi===0?[
+   ['drop',.001,.001],['chest',.004,-.002],['drop',-.004,.003],['rare',-.002,-.005],['chest',.006,.005]
+  ]:[
+   ['drop',.002,-.001],['chest',-.003,.003],['drop',-.005,-.002],['rare',.004,.004]
+  ];
+  specs.forEach(s=>addItem(s[0],z.lat+s[1],z.lng+s[2]));
+ });
 }
-
-function goToMe(){
-  if(map && myLat) map.flyTo([myLat,myLng],14,{duration:.8});
+function addItem(type,lat,lng){
+ const emoji={drop:'💧',chest:'🎁',rare:'🌱'}[type];
+ const icon=L.divIcon({className:'item-wrap',html:`<div class="item ${type}">${emoji}</div>`,iconSize:[44,44],iconAnchor:[22,22]});
+ const marker=L.marker([lat,lng],{icon,zIndexOffset:500}).addTo(map);
+ const obj={type,lat,lng,marker,taken:false};items.push(obj);
+ marker.on('click',()=>tryGet(obj));
 }
-
-function fallback(){
-  // 位置情報を取得できない場合だけ京都駅をデモ位置として利用
-  document.getElementById('status').textContent='位置情報を取得できないため、デモ位置を表示中。';
-  init(34.985849,135.758766);
+function tryGet(o){
+ if(o.taken)return;
+ const d=Math.round(distanceMeters(myLat,myLng,o.lat,o.lng));
+ if(d>GET_DISTANCE){toast(`あと ${d}m。近くまで歩いてみよう！`);map.flyTo([o.lat,o.lng],15,{duration:.6});return;}
+ o.taken=true;map.removeLayer(o.marker);counts[o.type]++;
+ document.getElementById(o.type==='drop'?'drops':o.type==='chest'?'chests':'rares').textContent=counts[o.type];
+ toast(o.type==='drop'?'雨粒をGET！ 💧':o.type==='chest'?'宝箱をGET！ 🎁':'レアアイテムをGET！ 🌱');
 }
-
-if(navigator.geolocation){
-  navigator.geolocation.getCurrentPosition(
-    p=>init(p.coords.latitude,p.coords.longitude),
-    fallback,
-    {enableHighAccuracy:true,timeout:10000,maximumAge:30000}
-  );
-}else fallback();
-</script>
-</body>
-</html>
+function updatePos(p){
+ myLat=p.coords.latitude;myLng=p.coords.longitude;
+ if(me)me.setLatLng([myLat,myLng]);
+}
+function goToMe(){if(map)map.flyTo([myLat,myLng],15,{duration:.7})}
+function fallback(){init(34.985849,135.758766);document.getElementById('status').textContent='位置情報を取得できないためデモ位置を表示中。'}
+navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>init(p.coords.latitude,p.coords.longitude),fallback,{enableHighAccuracy:true,timeout:10000}):fallback();
+</script></body></html>
